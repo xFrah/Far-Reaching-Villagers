@@ -1,6 +1,6 @@
-package com.fdimo.metrovillagers.platform;
+package com.fdimo.gossipingvillagers.platform;
 
-import com.fdimo.metrovillagers.platform.services.IPlatformHelper;
+import com.fdimo.gossipingvillagers.platform.services.IPlatformHelper;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class FabricPlatformHelper implements IPlatformHelper {
@@ -24,6 +24,6 @@ public class FabricPlatformHelper implements IPlatformHelper {
 
     @Override
     public net.minecraft.core.particles.SimpleParticleType getChattingParticle() {
-        return com.fdimo.metrovillagers.MetroVillagersMod.CHATTING_PARTICLE;
+        return com.fdimo.gossipingvillagers.GossipingVillagersMod.CHATTING_PARTICLE;
     }
 }

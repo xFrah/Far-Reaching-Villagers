@@ -1,4 +1,4 @@
-package com.fdimo.metrovillagers;
+package com.fdimo.gossipingvillagers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -32,8 +32,8 @@ public class AsyncPathfinder {
             float executedPerSec = executed / 5.0f;
             float newlyAddedPerSec = newlyAdded / 5.0f;
 
-            if (com.fdimo.metrovillagers.Config.DATA.enableQueueDebug) {
-                String msg = String.format("[Metro Villagers Async] Queue: %d/%d | New/sec: %.1f | Executed/sec: %.1f", pending, com.fdimo.metrovillagers.Config.DATA.asyncQueueCapacity, newlyAddedPerSec, executedPerSec);
+            if (Config.DATA.enableQueueDebug) {
+                String msg = String.format("[Gossiping Villagers Async] Queue: %d/%d | New/sec: %.1f | Executed/sec: %.1f", pending, Config.DATA.asyncQueueCapacity, newlyAddedPerSec, executedPerSec);
                 net.minecraft.network.chat.Component comp = net.minecraft.network.chat.Component.literal("§e" + msg);
                 for (net.minecraft.server.level.ServerPlayer player : serverLevel.getServer().getPlayerList().getPlayers()) {
                     player.sendSystemMessage(comp);
@@ -130,10 +130,10 @@ public class AsyncPathfinder {
                     Path path = pathFinder.findPath(region, villager, Set.of(pos.pos()), maxPathDistance, 1, 1.0F);
                     if (path != null && path.canReach()) {
                         reachableSites.add(pos);
-                        if (Config.DATA.enableDebugLogs) Constants.LOG.info("[Metro Villagers Async] [DEBUG] " + villagerPrefix + " Pathfinding SUCCESS for " + pos.pos().toShortString());
+                        if (Config.DATA.enableDebugLogs) Constants.LOG.info("[Gossiping Villagers Async] [DEBUG] " + villagerPrefix + " Pathfinding SUCCESS for " + pos.pos().toShortString());
                     } else {
                         failedSites.add(pos);
-                        if (Config.DATA.enableDebugLogs) Constants.LOG.info("[Metro Villagers Async] [DEBUG] " + villagerPrefix + " Pathfinding FAILED for " + pos.pos().toShortString());
+                        if (Config.DATA.enableDebugLogs) Constants.LOG.info("[Gossiping Villagers Async] [DEBUG] " + villagerPrefix + " Pathfinding FAILED for " + pos.pos().toShortString());
                     }
                 }
 

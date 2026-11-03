@@ -1,4 +1,4 @@
-package com.fdimo.metrovillagers;
+package com.fdimo.gossipingvillagers;
 
 public class CommonClass {
     public static final boolean DEBUG = true;

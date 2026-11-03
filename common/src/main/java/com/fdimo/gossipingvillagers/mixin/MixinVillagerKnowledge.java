@@ -1,6 +1,8 @@
-package com.fdimo.metrovillagers.mixin;
+package com.fdimo.gossipingvillagers.mixin;
 
-import com.fdimo.metrovillagers.IVillagerKnowledge;
+import com.fdimo.gossipingvillagers.IVillagerKnowledge;
+import com.fdimo.gossipingvillagers.Config;
+import com.fdimo.gossipingvillagers.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.world.entity.npc.villager.Villager;
@@ -47,15 +49,15 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
     private long getBlacklistDurationTicks(GlobalPos targetPos) {
         Villager self = (Villager) (Object) this;
         if (self.level() == null || self.level().dimension() != targetPos.dimension()) {
-            return com.fdimo.metrovillagers.Config.DATA.blacklistDurationSeconds * 20L;
+            return com.fdimo.gossipingvillagers.Config.DATA.blacklistDurationSeconds * 20L;
         }
         double dist = Math.sqrt(self.blockPosition().distSqr(targetPos.pos()));
-        double maxRadius = Math.max(1.0, (double) com.fdimo.metrovillagers.Config.DATA.pathfindingRadius);
+        double maxRadius = Math.max(1.0, (double) com.fdimo.gossipingvillagers.Config.DATA.pathfindingRadius);
         
         // Closest (<= 2 blocks): 2 seconds. Farthest (>= maxRadius): blacklistDurationSeconds
         double ratio = Math.min(1.0, Math.max(0.0, (dist - 2.0) / Math.max(1.0, maxRadius - 2.0)));
         long minTicks = 2 * 20L; // 2 seconds minimum for very close workstations (trade rerolling)
-        long maxTicks = com.fdimo.metrovillagers.Config.DATA.blacklistDurationSeconds * 20L;
+        long maxTicks = com.fdimo.gossipingvillagers.Config.DATA.blacklistDurationSeconds * 20L;
         
         return minTicks + (long) (ratio * (maxTicks - minTicks));
     }
@@ -70,7 +72,7 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
             if (currentTime - unreachableJobSites.get(pos) < blacklistTicks) {
                 return false;
             } else {
-                if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info("[Metro Villagers] [DEBUG] Blacklist expired for " + pos.pos().toShortString() + ", allowing retry!");
+                if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info("[Gossiping Villagers] [DEBUG] Blacklist expired for " + pos.pos().toShortString() + ", allowing retry!");
                 unreachableJobSites.remove(pos);
             }
         }
@@ -85,7 +87,7 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
         if (!canMemorize(pos, currentTime)) return;
 
         String prof = self.getVillagerData().profession().unwrapKey().map(k -> k.identifier().getPath()).orElse("none");
-        String prefix = "[Metro Villagers] [" + prof + " at " + currentVillagerPos.toShortString() + "] ";
+        String prefix = "[Gossiping Villagers] [" + prof + " at " + currentVillagerPos.toShortString() + "] ";
 
         String blockName = "unknown";
         if (self.level().dimension() == pos.dimension()) {
@@ -111,12 +113,12 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
                 }
 
                 // Otherwise, forget the farthest to make room
-                if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info(prefix + "Knowledge full! Forgetting farthest job site (" + farthestBlock + ") at " + farthest.pos().toShortString());
+                if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info(prefix + "Knowledge full! Forgetting farthest job site (" + farthestBlock + ") at " + farthest.pos().toShortString());
                 knownJobSites.remove(farthest);
             }
         }
 
-        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info(prefix + "Added new job site (" + blockName + ") to knowledge at " + pos.pos().toShortString());
+        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info(prefix + "Added new job site (" + blockName + ") to knowledge at " + pos.pos().toShortString());
         knownJobSites.add(pos);
     }
 
@@ -125,7 +127,7 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
         if (positions != null && !positions.isEmpty()) {
             Villager self = (Villager) (Object) this;
             String prof = self.getVillagerData().profession().unwrapKey().map(k -> k.identifier().getPath()).orElse("none");
-            if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info("[Metro Villagers] [" + prof + " at " + currentVillagerPos.toShortString() + "] Merging " + positions.size() + " job sites into knowledge...");
+            if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info("[Gossiping Villagers] [" + prof + " at " + currentVillagerPos.toShortString() + "] Merging " + positions.size() + " job sites into knowledge...");
             for (GlobalPos pos : positions) {
                 addKnownJobSite(pos, currentVillagerPos);
             }
@@ -139,7 +141,7 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
 
         Villager self = (Villager) (Object) this;
         String prof = self.getVillagerData().profession().unwrapKey().map(k -> k.identifier().getPath()).orElse("none");
-        String prefix = "[Metro Villagers] [" + prof + " at " + self.blockPosition().toShortString() + "] ";
+        String prefix = "[Gossiping Villagers] [" + prof + " at " + self.blockPosition().toShortString() + "] ";
 
         String blockName = "unknown";
         if (self.level().dimension() == pos.dimension()) {
@@ -147,15 +149,15 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
             blockName = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
         }
 
-        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
+        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) {
             long durationSecs = getBlacklistDurationTicks(pos) / 20L;
-            com.fdimo.metrovillagers.Constants.LOG.info(prefix + "Pathfinder failed! Blacklisting (" + blockName + ") at " + pos.pos().toShortString() + " for " + durationSecs + " seconds.");
+            com.fdimo.gossipingvillagers.Constants.LOG.info(prefix + "Pathfinder failed! Blacklisting (" + blockName + ") at " + pos.pos().toShortString() + " for " + durationSecs + " seconds.");
         }
     }
 
     @org.spongepowered.asm.mixin.injection.Inject(method = "mobInteract", at = @org.spongepowered.asm.mixin.injection.At("HEAD"))
     private void onMobInteract(net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<net.minecraft.world.InteractionResult> cir) {
-        if (!player.level().isClientSide() && hand == net.minecraft.world.InteractionHand.MAIN_HAND && com.fdimo.metrovillagers.Config.DATA.enableRightClickDebug) {
+        if (!player.level().isClientSide() && hand == net.minecraft.world.InteractionHand.MAIN_HAND && com.fdimo.gossipingvillagers.Config.DATA.enableRightClickDebug) {
             Villager self = (Villager) (Object) this;
             String prof = self.getVillagerData().profession().unwrapKey().map(k -> k.identifier().getPath()).orElse("none");
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§e--- Villager Knowledge: " + prof + " ---"));
