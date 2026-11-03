@@ -33,7 +33,7 @@ public class AsyncPathfinder {
             float newlyAddedPerSec = newlyAdded / 5.0f;
 
             if (com.fdimo.metrovillagers.Config.DATA.enableQueueDebug) {
-                String msg = String.format("[Metro Villagers Async] Queue: %d | New/sec: %.1f | Executed/sec: %.1f", pending, newlyAddedPerSec, executedPerSec);
+                String msg = String.format("[Metro Villagers Async] Queue: %d/%d | New/sec: %.1f | Executed/sec: %.1f", pending, com.fdimo.metrovillagers.Config.DATA.asyncQueueCapacity, newlyAddedPerSec, executedPerSec);
                 net.minecraft.network.chat.Component comp = net.minecraft.network.chat.Component.literal("§e" + msg);
                 for (net.minecraft.server.level.ServerPlayer player : serverLevel.getServer().getPlayerList().getPlayers()) {
                     player.sendSystemMessage(comp);

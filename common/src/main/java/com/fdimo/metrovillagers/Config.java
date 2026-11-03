@@ -17,6 +17,7 @@ public class Config {
     public static class ConfigData {
         public int pathfindingRadius = 96;
         public int maxPathfindingNodes = 5000;
+        public int asyncQueueCapacity = 1000;
         public double gossipRadius = 5.0;
         public boolean enableDebugBeams = false;
         public boolean enableDebugLogs = false;
@@ -35,12 +36,18 @@ public class Config {
         if (CONFIG_FILE.exists()) {
             try (FileReader reader = new FileReader(CONFIG_FILE)) {
                 DATA = GSON.fromJson(reader, ConfigData.class);
+                if (DATA == null) {
+                    DATA = new ConfigData();
+                }
+                if (DATA.asyncQueueCapacity <= 0) {
+                    DATA.asyncQueueCapacity = 1000;
+                }
             } catch (Exception e) {
                 Constants.LOG.error("Failed to read config file", e);
             }
-        } else {
-            save();
         }
+        save();
+        Constants.initThreadPool();
     }
 
     public static void save() {
