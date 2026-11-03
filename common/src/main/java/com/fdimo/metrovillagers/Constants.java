@@ -15,14 +15,26 @@ public class Constants {
 	public static final Logger LOG = LoggerFactory.getLogger(MOD_NAME);
 	
 	private static final AtomicInteger threadId = new AtomicInteger(1);
-    public static final ThreadPoolExecutor ASYNC_POOL = new ThreadPoolExecutor(
-        1, 1, 0L, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<>(1000),
-        r -> {
-            Thread t = new Thread(r, "MetroVillagers-Async-" + threadId.getAndIncrement());
-            t.setDaemon(true);
-            return t;
-        },
-        new ThreadPoolExecutor.DiscardOldestPolicy()
-    );
+    public static volatile ThreadPoolExecutor ASYNC_POOL = createThreadPool(1000);
+
+    public static ThreadPoolExecutor createThreadPool(int capacity) {
+        return new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(Math.max(10, capacity)),
+            r -> {
+                Thread t = new Thread(r, "MetroVillagers-Async-" + threadId.getAndIncrement());
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.DiscardOldestPolicy()
+        );
+    }
+
+    public static synchronized void initThreadPool() {
+        if (ASYNC_POOL != null && !ASYNC_POOL.isShutdown()) {
+            ASYNC_POOL.shutdown();
+        }
+        int capacity = Config.DATA != null ? Config.DATA.asyncQueueCapacity : 1000;
+        ASYNC_POOL = createThreadPool(capacity);
+    }
 }
