@@ -36,6 +36,12 @@ public abstract class MixinVillagerAI {
             return OCCUPANCY_CACHE_OWNER.getOrDefault(pos, -1) != -1;
         }
 
+        if (!serverLevel.getPoiManager().exists(pos, holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))) {
+            OCCUPANCY_CACHE_TIME.put(pos, currentTime);
+            OCCUPANCY_CACHE_OWNER.put(pos, -1);
+            return false;
+        }
+
         net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pos).inflate(com.fdimo.metrovillagers.Config.DATA.pathfindingRadius + 16.0D);
         int occupiedBy = -1;
         for (Villager v : serverLevel.getEntitiesOfClass(Villager.class, box)) {
@@ -75,6 +81,16 @@ public abstract class MixinVillagerAI {
             return;
         ServerLevel serverLevel = (ServerLevel) self.level();
 
+        // If the villager has a profession, clear any lingering attempted job site
+        if (!self.getVillagerData().profession().is(VillagerProfession.NONE)) {
+            this.lastAttemptedJobSite = null;
+        }
+
+        // Skip gossip network if riding in a vehicle or has disabled AI
+        if (self.isPassenger() || self.isNoAi()) {
+            return;
+        }
+
         if (com.fdimo.metrovillagers.Config.DATA.enableDebugBeams && self.tickCount % 5 == 0) {
             org.joml.Vector3f yellow = new org.joml.Vector3f(1.0f, 1.0f, 0.0f);
             self.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(pos -> {
@@ -98,12 +114,26 @@ public abstract class MixinVillagerAI {
         if (passiveTicks > 0 && self.tickCount % passiveTicks == self.getId() % passiveTicks) {
             PoiManager poiManager = serverLevel.getPoiManager();
 
-            // Validate memory (remove destroyed job sites)
+            // Validate memory (remove destroyed job sites and occupied ones)
             Set<GlobalPos> toRemove = new java.util.HashSet<>();
             for (GlobalPos pos : knowledge.getKnownJobSites()) {
                 if (pos.dimension() == serverLevel.dimension()) {
-                    boolean hasSpace = !metro_isOccupied(serverLevel, pos.pos());
+                    boolean exists = serverLevel.getPoiManager().exists(
+                            pos.pos(),
+                            poiTypeHolder -> poiTypeHolder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE));
 
+                    if (!exists) {
+                        toRemove.add(pos);
+                        metro_invalidateOccupancy(pos.pos());
+                        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
+                            com.fdimo.metrovillagers.Constants.LOG
+                                    .info("[Metro Villagers] [Memory Validation] Removed destroyed job site at "
+                                            + pos.pos().toShortString());
+                        }
+                        continue;
+                    }
+
+                    boolean hasSpace = !metro_isOccupied(serverLevel, pos.pos());
                     if (!hasSpace) {
                         toRemove.add(pos);
                         if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
@@ -139,11 +169,21 @@ public abstract class MixinVillagerAI {
             }
         }
 
-        // Stuck Detection: If they have a potential job site but haven't moved in X seconds
+        // Stuck Detection: Only run if actively trying to pathfind to a job site
         int stuckTicks = com.fdimo.metrovillagers.Config.DATA.pathfindingStuckTimeSeconds * 20;
         if (stuckTicks > 0 && self.tickCount % stuckTicks == self.getId() % stuckTicks) {
             Brain<Villager> brain = self.getBrain();
-            if (brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).isPresent()) {
+            
+            // Only trigger stuck detection if:
+            // 1. Villager is in IDLE or WORK activity (NOT gathering at bell, sleeping, panicking, etc)
+            // 2. Villager is actively navigating/moving towards a target
+            // 3. Villager has a potential job site
+            boolean isNormalActivity = brain.isActive(net.minecraft.world.entity.schedule.Activity.IDLE) 
+                    || brain.isActive(net.minecraft.world.entity.schedule.Activity.WORK);
+            boolean isActivelyPathfinding = self.getNavigation().isInProgress() 
+                    || brain.getMemory(MemoryModuleType.WALK_TARGET).isPresent();
+
+            if (isNormalActivity && isActivelyPathfinding && brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).isPresent()) {
                 double stuckDist = com.fdimo.metrovillagers.Config.DATA.pathfindingStuckDistance;
                 if (this.metro_lastPosCheck != null && this.metro_lastPosCheck.distanceToSqr(self.position()) < stuckDist * stuckDist) {
                     GlobalPos target = brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).get();
@@ -154,7 +194,6 @@ public abstract class MixinVillagerAI {
                         knowledge.markUnreachable(target, serverLevel.getGameTime());
                         brain.eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
                         brain.eraseMemory(MemoryModuleType.JOB_SITE);
-                        serverLevel.getPoiManager().release(target.pos());
                         metro_invalidateOccupancy(target.pos());
                         this.lastAttemptedJobSite = null;
                         
@@ -181,10 +220,17 @@ public abstract class MixinVillagerAI {
                 if (brain.isActive(net.minecraft.world.entity.schedule.Activity.IDLE) && brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).isEmpty()) {
 
                     if (this.lastAttemptedJobSite != null) {
-                        knowledge.markUnreachable(this.lastAttemptedJobSite, serverLevel.getGameTime());
-                        serverLevel.getPoiManager().release(this.lastAttemptedJobSite.pos());
-                        metro_invalidateOccupancy(this.lastAttemptedJobSite.pos());
+                        GlobalPos site = this.lastAttemptedJobSite;
                         this.lastAttemptedJobSite = null;
+                        metro_invalidateOccupancy(site.pos());
+
+                        // If the workstation was destroyed, remove it immediately from knowledge without blacklisting
+                        if (!serverLevel.getPoiManager().exists(site.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))) {
+                            knowledge.getKnownJobSites().remove(site);
+                        } else {
+                            // Workstation still exists but pathfinding failed: apply distance-scaled cooldown
+                            knowledge.markUnreachable(site, serverLevel.getGameTime());
+                        }
                     }
 
                     // Gossip cooldown
@@ -215,6 +261,7 @@ public abstract class MixinVillagerAI {
                         Set<GlobalPos> validGossip = new java.util.HashSet<>();
                         for (GlobalPos pos : nearbySites) {
                             if (pos.dimension() == serverLevel.dimension()
+                                    && serverLevel.getPoiManager().exists(pos.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))
                                     && knowledge.canMemorize(pos, serverLevel.getGameTime())) {
                                 boolean hasSpace = !metro_isOccupied(serverLevel, pos.pos());
 
@@ -269,7 +316,9 @@ public abstract class MixinVillagerAI {
                     Set<GlobalPos> mySites = knowledge.getKnownJobSites();
                     if (!mySites.isEmpty()) {
                         GlobalPos closestSite = mySites.stream()
-                                .filter(p -> !metro_isOccupied(serverLevel, p.pos()))
+                                .filter(p -> p.dimension() == serverLevel.dimension()
+                                        && serverLevel.getPoiManager().exists(p.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))
+                                        && !metro_isOccupied(serverLevel, p.pos()))
                                 .min(Comparator.comparingDouble(p -> p.pos().distSqr(self.blockPosition())))
                                 .orElse(null);
 
