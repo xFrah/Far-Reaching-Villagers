@@ -11,7 +11,6 @@ import java.io.IOException;
 public class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final File CONFIG_FILE = new File("config/gossiping_villagers.json");
-    private static final File OLD_CONFIG_FILE = new File("config/metro_villagers.json");
 
     public static ConfigData DATA = new ConfigData();
 
@@ -34,9 +33,8 @@ public class Config {
     }
 
     public static void load() {
-        File fileToRead = CONFIG_FILE.exists() ? CONFIG_FILE : (OLD_CONFIG_FILE.exists() ? OLD_CONFIG_FILE : null);
-        if (fileToRead != null) {
-            try (FileReader reader = new FileReader(fileToRead)) {
+        if (CONFIG_FILE.exists()) {
+            try (FileReader reader = new FileReader(CONFIG_FILE)) {
                 DATA = GSON.fromJson(reader, ConfigData.class);
                 if (DATA == null) {
                     DATA = new ConfigData();
