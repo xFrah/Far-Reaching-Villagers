@@ -153,6 +153,13 @@ public class AsyncPathfinder {
                             }
                         }
                         
+                        // Mark failed sites unreachable with distance-scaled cooldown
+                        long gameTime = serverLevel.getGameTime();
+                        IVillagerKnowledge knowledge = (IVillagerKnowledge) villager;
+                        for (GlobalPos pos : failedSites) {
+                            knowledge.markUnreachable(pos, gameTime);
+                        }
+
                         callback.accept(reachableSites);
                     }
                 });

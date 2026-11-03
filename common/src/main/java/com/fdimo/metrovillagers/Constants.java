@@ -17,11 +17,12 @@ public class Constants {
 	private static final AtomicInteger threadId = new AtomicInteger(1);
     public static final ThreadPoolExecutor ASYNC_POOL = new ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<>(),
+        new LinkedBlockingQueue<>(1000),
         r -> {
             Thread t = new Thread(r, "MetroVillagers-Async-" + threadId.getAndIncrement());
             t.setDaemon(true);
             return t;
-        }
+        },
+        new ThreadPoolExecutor.DiscardOldestPolicy()
     );
 }

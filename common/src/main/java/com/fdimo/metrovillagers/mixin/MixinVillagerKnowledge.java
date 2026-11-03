@@ -43,13 +43,30 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
         return this.knownJobSites;
     }
 
+    @Unique
+    private long getBlacklistDurationTicks(GlobalPos targetPos) {
+        Villager self = (Villager) (Object) this;
+        if (self.level() == null || self.level().dimension() != targetPos.dimension()) {
+            return com.fdimo.metrovillagers.Config.DATA.blacklistDurationSeconds * 20L;
+        }
+        double dist = Math.sqrt(self.blockPosition().distSqr(targetPos.pos()));
+        double maxRadius = Math.max(1.0, (double) com.fdimo.metrovillagers.Config.DATA.pathfindingRadius);
+        
+        // Closest (<= 2 blocks): 2 seconds. Farthest (>= maxRadius): blacklistDurationSeconds
+        double ratio = Math.min(1.0, Math.max(0.0, (dist - 2.0) / Math.max(1.0, maxRadius - 2.0)));
+        long minTicks = 2 * 20L; // 2 seconds minimum for very close workstations (trade rerolling)
+        long maxTicks = com.fdimo.metrovillagers.Config.DATA.blacklistDurationSeconds * 20L;
+        
+        return minTicks + (long) (ratio * (maxTicks - minTicks));
+    }
+
     @Override
     public boolean canMemorize(GlobalPos pos, long currentTime) {
         if (knownJobSites.contains(pos)) {
             return false;
         }
         if (unreachableJobSites.containsKey(pos)) {
-            long blacklistTicks = com.fdimo.metrovillagers.Config.DATA.blacklistDurationSeconds * 20L; // Configured in seconds, converted to game ticks
+            long blacklistTicks = getBlacklistDurationTicks(pos);
             if (currentTime - unreachableJobSites.get(pos) < blacklistTicks) {
                 return false;
             } else {
@@ -130,7 +147,10 @@ public class MixinVillagerKnowledge implements IVillagerKnowledge {
             blockName = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
         }
 
-        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info(prefix + "Pathfinder failed! Blacklisting (" + blockName + ") at " + pos.pos().toShortString() + " for 5 seconds.");
+        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
+            long durationSecs = getBlacklistDurationTicks(pos) / 20L;
+            com.fdimo.metrovillagers.Constants.LOG.info(prefix + "Pathfinder failed! Blacklisting (" + blockName + ") at " + pos.pos().toShortString() + " for " + durationSecs + " seconds.");
+        }
     }
 
     @org.spongepowered.asm.mixin.injection.Inject(method = "mobInteract", at = @org.spongepowered.asm.mixin.injection.At("HEAD"))
