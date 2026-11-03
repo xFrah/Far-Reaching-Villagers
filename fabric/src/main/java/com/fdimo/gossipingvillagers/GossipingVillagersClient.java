@@ -1,12 +1,12 @@
-package com.fdimo.metrovillagers;
+package com.fdimo.gossipingvillagers;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.minecraft.client.particle.HeartParticle;
 
-public class MetroVillagersClient implements ClientModInitializer {
+public class GossipingVillagersClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        ParticleFactoryRegistry.getInstance().register(MetroVillagersMod.CHATTING_PARTICLE, HeartParticle.Provider::new);
+        ParticleFactoryRegistry.getInstance().register(GossipingVillagersMod.CHATTING_PARTICLE, HeartParticle.Provider::new);
     }
 }

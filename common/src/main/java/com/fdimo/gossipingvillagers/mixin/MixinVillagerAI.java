@@ -1,6 +1,6 @@
-package com.fdimo.metrovillagers.mixin;
+package com.fdimo.gossipingvillagers.mixin;
 
-import com.fdimo.metrovillagers.IVillagerKnowledge;
+import com.fdimo.gossipingvillagers.IVillagerKnowledge;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.Brain;
@@ -27,12 +27,12 @@ public abstract class MixinVillagerAI {
     private static final java.util.Map<net.minecraft.core.BlockPos, Integer> OCCUPANCY_CACHE_OWNER = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Unique
-    private boolean metro_isOccupied(ServerLevel serverLevel, net.minecraft.core.BlockPos pos) {
+    private boolean gossiping_isOccupied(ServerLevel serverLevel, net.minecraft.core.BlockPos pos) {
         long currentTime = serverLevel.getGameTime();
         Long lastCheck = OCCUPANCY_CACHE_TIME.get(pos);
         
         // Cache occupancy status based on config duration to prevent spamming spatial queries
-        if (lastCheck != null && currentTime - lastCheck < (com.fdimo.metrovillagers.Config.DATA.occupancyCacheDurationSeconds * 20L)) {
+        if (lastCheck != null && currentTime - lastCheck < (com.fdimo.gossipingvillagers.Config.DATA.occupancyCacheDurationSeconds * 20L)) {
             return OCCUPANCY_CACHE_OWNER.getOrDefault(pos, -1) != -1;
         }
 
@@ -42,7 +42,7 @@ public abstract class MixinVillagerAI {
             return false;
         }
 
-        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pos).inflate(com.fdimo.metrovillagers.Config.DATA.pathfindingRadius + 16.0D);
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pos).inflate(com.fdimo.gossipingvillagers.Config.DATA.pathfindingRadius + 16.0D);
         int occupiedBy = -1;
         for (Villager v : serverLevel.getEntitiesOfClass(Villager.class, box)) {
             java.util.Optional<GlobalPos> jobSite = v.getBrain().getMemory(MemoryModuleType.JOB_SITE);
@@ -65,14 +65,14 @@ public abstract class MixinVillagerAI {
     }
 
     @Unique
-    private static void metro_invalidateOccupancy(net.minecraft.core.BlockPos pos) {
+    private static void gossiping_invalidateOccupancy(net.minecraft.core.BlockPos pos) {
         OCCUPANCY_CACHE_OWNER.put(pos, -1);
         OCCUPANCY_CACHE_TIME.remove(pos);
     }
 
     @Unique
     private GlobalPos lastAttemptedJobSite = null;
-    private net.minecraft.world.phys.Vec3 metro_lastPosCheck = null;
+    private net.minecraft.world.phys.Vec3 gossiping_lastPosCheck = null;
 
     @Inject(method = "customServerAiStep", at = @At("TAIL"))
     private void onCustomServerAiStep(CallbackInfo ci) {
@@ -91,26 +91,26 @@ public abstract class MixinVillagerAI {
             return;
         }
 
-        if (com.fdimo.metrovillagers.Config.DATA.enableDebugBeams && self.tickCount % 5 == 0) {
+        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugBeams && self.tickCount % 5 == 0) {
             org.joml.Vector3f yellow = new org.joml.Vector3f(1.0f, 1.0f, 0.0f);
             self.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(pos -> {
                 if (pos.dimension() == serverLevel.dimension()) {
-                    com.fdimo.metrovillagers.AsyncPathfinder.drawBeam(serverLevel, net.minecraft.world.phys.Vec3.atCenterOf(pos.pos()), self.getEyePosition(), yellow);
+                    com.fdimo.gossipingvillagers.AsyncPathfinder.drawBeam(serverLevel, net.minecraft.world.phys.Vec3.atCenterOf(pos.pos()), self.getEyePosition(), yellow);
                 }
             });
             self.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).ifPresent(pos -> {
                 if (pos.dimension() == serverLevel.dimension()) {
-                    com.fdimo.metrovillagers.AsyncPathfinder.drawBeam(serverLevel, net.minecraft.world.phys.Vec3.atCenterOf(pos.pos()), self.getEyePosition(), yellow);
+                    com.fdimo.gossipingvillagers.AsyncPathfinder.drawBeam(serverLevel, net.minecraft.world.phys.Vec3.atCenterOf(pos.pos()), self.getEyePosition(), yellow);
                 }
             });
         }
 
         IVillagerKnowledge knowledge = (IVillagerKnowledge) self;
 
-        com.fdimo.metrovillagers.AsyncPathfinder.printMetrics(serverLevel);
+        com.fdimo.gossipingvillagers.AsyncPathfinder.printMetrics(serverLevel);
 
         // Passive Observation: Run based on config frequency, staggered by entity ID to prevent lag spikes
-        int passiveTicks = com.fdimo.metrovillagers.Config.DATA.passiveLearningFrequencySeconds * 20;
+        int passiveTicks = com.fdimo.gossipingvillagers.Config.DATA.passiveLearningFrequencySeconds * 20;
         if (passiveTicks > 0 && self.tickCount % passiveTicks == self.getId() % passiveTicks) {
             PoiManager poiManager = serverLevel.getPoiManager();
 
@@ -124,21 +124,21 @@ public abstract class MixinVillagerAI {
 
                     if (!exists) {
                         toRemove.add(pos);
-                        metro_invalidateOccupancy(pos.pos());
-                        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
-                            com.fdimo.metrovillagers.Constants.LOG
-                                    .info("[Metro Villagers] [Memory Validation] Removed destroyed job site at "
+                        gossiping_invalidateOccupancy(pos.pos());
+                        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) {
+                            com.fdimo.gossipingvillagers.Constants.LOG
+                                    .info("[Gossiping Villagers] [Memory Validation] Removed destroyed job site at "
                                             + pos.pos().toShortString());
                         }
                         continue;
                     }
 
-                    boolean hasSpace = !metro_isOccupied(serverLevel, pos.pos());
+                    boolean hasSpace = !gossiping_isOccupied(serverLevel, pos.pos());
                     if (!hasSpace) {
                         toRemove.add(pos);
-                        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
-                            com.fdimo.metrovillagers.Constants.LOG
-                                    .info("[Metro Villagers] [Memory Validation] Removed invalid/occupied job site at "
+                        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) {
+                            com.fdimo.gossipingvillagers.Constants.LOG
+                                    .info("[Gossiping Villagers] [Memory Validation] Removed invalid/occupied job site at "
                                             + pos.pos().toShortString());
                         }
                     }
@@ -150,17 +150,17 @@ public abstract class MixinVillagerAI {
             poiManager.getInRange(
                     poiTypeHolder -> poiTypeHolder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE),
                     self.blockPosition(),
-                    com.fdimo.metrovillagers.Config.DATA.pathfindingRadius,
+                    com.fdimo.gossipingvillagers.Config.DATA.pathfindingRadius,
                     PoiManager.Occupancy.HAS_SPACE).forEach(poiRecord -> {
                         GlobalPos pos = GlobalPos.of(serverLevel.dimension(), poiRecord.getPos());
-                        if (!metro_isOccupied(serverLevel, pos.pos())
+                        if (!gossiping_isOccupied(serverLevel, pos.pos())
                                 && knowledge.canMemorize(pos, serverLevel.getGameTime())) {
                             scannedSites.add(pos);
                         }
                     });
 
             if (!scannedSites.isEmpty()) {
-                com.fdimo.metrovillagers.AsyncPathfinder.checkReachableSites(self, serverLevel, scannedSites,
+                com.fdimo.gossipingvillagers.AsyncPathfinder.checkReachableSites(self, serverLevel, scannedSites,
                         (reachableSites) -> {
                             for (GlobalPos pos : reachableSites) {
                                 knowledge.addKnownJobSite(pos, self.blockPosition());
@@ -170,7 +170,7 @@ public abstract class MixinVillagerAI {
         }
 
         // Stuck Detection: Only run if actively trying to pathfind to a job site
-        int stuckTicks = com.fdimo.metrovillagers.Config.DATA.pathfindingStuckTimeSeconds * 20;
+        int stuckTicks = com.fdimo.gossipingvillagers.Config.DATA.pathfindingStuckTimeSeconds * 20;
         if (stuckTicks > 0 && self.tickCount % stuckTicks == self.getId() % stuckTicks) {
             Brain<Villager> brain = self.getBrain();
             
@@ -184,29 +184,29 @@ public abstract class MixinVillagerAI {
                     || brain.getMemory(MemoryModuleType.WALK_TARGET).isPresent();
 
             if (isNormalActivity && isActivelyPathfinding && brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).isPresent()) {
-                double stuckDist = com.fdimo.metrovillagers.Config.DATA.pathfindingStuckDistance;
-                if (this.metro_lastPosCheck != null && this.metro_lastPosCheck.distanceToSqr(self.position()) < stuckDist * stuckDist) {
+                double stuckDist = com.fdimo.gossipingvillagers.Config.DATA.pathfindingStuckDistance;
+                if (this.gossiping_lastPosCheck != null && this.gossiping_lastPosCheck.distanceToSqr(self.position()) < stuckDist * stuckDist) {
                     GlobalPos target = brain.getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).get();
                     if (target.dimension() == serverLevel.dimension() && self.blockPosition().distManhattan(target.pos()) > 2) {
-                        if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) {
-                            com.fdimo.metrovillagers.Constants.LOG.info("[Metro Villagers] Villager at " + self.blockPosition().toShortString() + " is physically stuck while pathfinding to " + target.pos().toShortString() + "! Blacklisting.");
+                        if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) {
+                            com.fdimo.gossipingvillagers.Constants.LOG.info("[Gossiping Villagers] Villager at " + self.blockPosition().toShortString() + " is physically stuck while pathfinding to " + target.pos().toShortString() + "! Blacklisting.");
                         }
                         knowledge.markUnreachable(target, serverLevel.getGameTime());
                         brain.eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
                         brain.eraseMemory(MemoryModuleType.JOB_SITE);
-                        metro_invalidateOccupancy(target.pos());
+                        gossiping_invalidateOccupancy(target.pos());
                         this.lastAttemptedJobSite = null;
                         
-                        if (com.fdimo.metrovillagers.Config.DATA.enableStuckParticles) {
+                        if (com.fdimo.gossipingvillagers.Config.DATA.enableStuckParticles) {
                             serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
                                     self.getX(), self.getY() + self.getEyeHeight() + 0.5, self.getZ(),
                                     5, 0.3, 0.3, 0.3, 0.0);
                         }
                     }
                 }
-                this.metro_lastPosCheck = self.position();
+                this.gossiping_lastPosCheck = self.position();
             } else {
-                this.metro_lastPosCheck = null;
+                this.gossiping_lastPosCheck = null;
             }
         }
 
@@ -222,7 +222,7 @@ public abstract class MixinVillagerAI {
                     if (this.lastAttemptedJobSite != null) {
                         GlobalPos site = this.lastAttemptedJobSite;
                         this.lastAttemptedJobSite = null;
-                        metro_invalidateOccupancy(site.pos());
+                        gossiping_invalidateOccupancy(site.pos());
 
                         // If the workstation was destroyed, remove it immediately from knowledge without blacklisting
                         if (!serverLevel.getPoiManager().exists(site.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))) {
@@ -234,7 +234,7 @@ public abstract class MixinVillagerAI {
                     }
 
                     // Gossip cooldown
-                    long gossipCooldownTicks = com.fdimo.metrovillagers.Config.DATA.gossipCooldownSeconds * 20L;
+                    long gossipCooldownTicks = com.fdimo.gossipingvillagers.Config.DATA.gossipCooldownSeconds * 20L;
                     if (serverLevel.getGameTime() - knowledge.getLastGossipTime() < gossipCooldownTicks) {
                         return;
                     }
@@ -242,7 +242,7 @@ public abstract class MixinVillagerAI {
                     // Look for nearby villagers to ask
                     List<Villager> nearbyVillagers = serverLevel.getEntitiesOfClass(
                             Villager.class,
-                            self.getBoundingBox().inflate(com.fdimo.metrovillagers.Config.DATA.gossipRadius));
+                            self.getBoundingBox().inflate(com.fdimo.gossipingvillagers.Config.DATA.gossipRadius));
 
                     boolean foundGossip = false;
                     for (Villager nearby : nearbyVillagers) {
@@ -263,7 +263,7 @@ public abstract class MixinVillagerAI {
                             if (pos.dimension() == serverLevel.dimension()
                                     && serverLevel.getPoiManager().exists(pos.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))
                                     && knowledge.canMemorize(pos, serverLevel.getGameTime())) {
-                                boolean hasSpace = !metro_isOccupied(serverLevel, pos.pos());
+                                boolean hasSpace = !gossiping_isOccupied(serverLevel, pos.pos());
 
                                 if (hasSpace) {
                                     validGossip.add(pos);
@@ -276,30 +276,30 @@ public abstract class MixinVillagerAI {
                             net.minecraft.world.phys.Vec3 nearbyEyePos = nearby.getEyePosition();
 
                             // Verify reachability before merging their knowledge into ours
-                            com.fdimo.metrovillagers.AsyncPathfinder.checkReachableSites(self, serverLevel, validGossip,
+                            com.fdimo.gossipingvillagers.AsyncPathfinder.checkReachableSites(self, serverLevel, validGossip,
                                     (reachableSites) -> {
                                         if (!reachableSites.isEmpty()) {
                                             // Draw blue beam between gossiping villagers
-                                            if (com.fdimo.metrovillagers.Config.DATA.enableDebugBeams) {
+                                            if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugBeams) {
                                                 org.joml.Vector3f blue = new org.joml.Vector3f(0.0f, 0.0f, 1.0f);
-                                                com.fdimo.metrovillagers.AsyncPathfinder.drawBeam(serverLevel,
+                                                com.fdimo.gossipingvillagers.AsyncPathfinder.drawBeam(serverLevel,
                                                         self.getEyePosition(), nearbyEyePos, blue);
                                             }
 
                                             // Spawn chatting particle on successful gossip!
                                             serverLevel.sendParticles(
-                                                    com.fdimo.metrovillagers.platform.Services.PLATFORM
+                                                    com.fdimo.gossipingvillagers.platform.Services.PLATFORM
                                                             .getChattingParticle(),
                                                     self.getX(), self.getY() + self.getEyeHeight(), self.getZ(), 5, 0.5,
                                                     0.5, 0.5, 0.0);
                                             serverLevel.sendParticles(
-                                                    com.fdimo.metrovillagers.platform.Services.PLATFORM
+                                                    com.fdimo.gossipingvillagers.platform.Services.PLATFORM
                                                             .getChattingParticle(),
                                                     nearbyEyePos.x, nearbyEyePos.y, nearbyEyePos.z, 5, 0.5, 0.5, 0.5,
                                                     0.0);
 
                                             String prof = self.getVillagerData().getProfession().name();
-                                            if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info("[Metro Villagers] [" + prof
+                                            if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info("[Gossiping Villagers] [" + prof
                                                     + " at " + self.blockPosition().toShortString()
                                                     + "] Jobless Villager queried nearby villager and verified "
                                                     + reachableSites.size() + " known sites!");
@@ -318,7 +318,7 @@ public abstract class MixinVillagerAI {
                         GlobalPos closestSite = mySites.stream()
                                 .filter(p -> p.dimension() == serverLevel.dimension()
                                         && serverLevel.getPoiManager().exists(p.pos(), holder -> holder.is(net.minecraft.tags.PoiTypeTags.ACQUIRABLE_JOB_SITE))
-                                        && !metro_isOccupied(serverLevel, p.pos()))
+                                        && !gossiping_isOccupied(serverLevel, p.pos()))
                                 .min(Comparator.comparingDouble(p -> p.pos().distSqr(self.blockPosition())))
                                 .orElse(null);
 
@@ -330,13 +330,13 @@ public abstract class MixinVillagerAI {
                                     blockName = net.minecraft.core.registries.BuiltInRegistries.BLOCK
                                             .getKey(serverLevel.getBlockState(closestSite.pos()).getBlock()).toString();
                                 }
-                                if (com.fdimo.metrovillagers.Config.DATA.enableDebugLogs) com.fdimo.metrovillagers.Constants.LOG.info("[Metro Villagers] [" + prof + " at "
+                                if (com.fdimo.gossipingvillagers.Config.DATA.enableDebugLogs) com.fdimo.gossipingvillagers.Constants.LOG.info("[Gossiping Villagers] [" + prof + " at "
                                         + self.blockPosition().toShortString()
                                         + "] Jobless Villager selected closest gossiped job site (" + blockName
                                         + ") at " + closestSite.pos().toShortString() + " as their new target!");
 
                                 serverLevel.sendParticles(
-                                        com.fdimo.metrovillagers.platform.Services.PLATFORM.getChattingParticle(),
+                                        com.fdimo.gossipingvillagers.platform.Services.PLATFORM.getChattingParticle(),
                                         self.getX(), self.getY() + self.getEyeHeight(), self.getZ(), 3, 0.5, 0.5, 0.5,
                                         0.0);
                             }

@@ -1,4 +1,4 @@
-package com.fdimo.metrovillagers;
+package com.fdimo.gossipingvillagers;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Constants {
 
-	public static final String MOD_ID = "metro_villagers";
-	public static final String MOD_NAME = "Metro Villagers";
+	public static final String MOD_ID = "gossiping_villagers";
+	public static final String MOD_NAME = "Gossiping Villagers";
 	public static final Logger LOG = LoggerFactory.getLogger(MOD_NAME);
 	
 	private static final AtomicInteger threadId = new AtomicInteger(1);
@@ -22,7 +22,7 @@ public class Constants {
             1, 1, 0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(Math.max(10, capacity)),
             r -> {
-                Thread t = new Thread(r, "MetroVillagers-Async-" + threadId.getAndIncrement());
+                Thread t = new Thread(r, "GossipingVillagers-Async-" + threadId.getAndIncrement());
                 t.setDaemon(true);
                 return t;
             },
