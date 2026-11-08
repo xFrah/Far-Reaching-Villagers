@@ -1,8 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.fdimo.gossipingvillagers.mixin",
-  "refmap": "${mod_id}.refmap.json",
+  "package": "com.fdimo.farreachingvillagers.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [],

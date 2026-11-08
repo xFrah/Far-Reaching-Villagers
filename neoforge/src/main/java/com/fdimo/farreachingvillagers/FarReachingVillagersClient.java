@@ -1,4 +1,4 @@
-package com.fdimo.gossipingvillagers;
+package com.fdimo.farreachingvillagers;
 
 import net.minecraft.client.particle.HeartParticle;
 import net.neoforged.api.distmarker.Dist;
@@ -7,9 +7,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 @EventBusSubscriber(modid = Constants.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class GossipingVillagersClient {
+public class FarReachingVillagersClient {
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(GossipingVillagersMod.CHATTING_PARTICLE.get(), HeartParticle.Provider::new);
+        event.registerSpriteSet(FarReachingVillagersMod.CHATTING_PARTICLE.get(), HeartParticle.Provider::new);
     }
 }

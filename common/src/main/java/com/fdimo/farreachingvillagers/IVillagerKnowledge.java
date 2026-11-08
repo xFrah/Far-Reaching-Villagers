@@ -1,4 +1,4 @@
-package com.fdimo.gossipingvillagers;
+package com.fdimo.farreachingvillagers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;

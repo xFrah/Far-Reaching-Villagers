@@ -1,4 +1,4 @@
-package com.fdimo.gossipingvillagers;
+package com.fdimo.farreachingvillagers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File CONFIG_FILE = new File("config/gossiping_villagers.json");
+    private static final File CONFIG_FILE = new File("config/far_reaching_villagers.json");
 
     public static ConfigData DATA = new ConfigData();
 

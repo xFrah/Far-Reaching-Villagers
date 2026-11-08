@@ -1,4 +1,4 @@
-package com.fdimo.gossipingvillagers;
+package com.fdimo.farreachingvillagers;
 
 import net.fabricmc.api.ModInitializer;
 
@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.fabricmc.fabric.api.particle.v1.FabricParticleTypes;
 
-public class GossipingVillagersMod implements ModInitializer {
+public class FarReachingVillagersMod implements ModInitializer {
     public static final SimpleParticleType CHATTING_PARTICLE = FabricParticleTypes.simple();
 
     @Override
