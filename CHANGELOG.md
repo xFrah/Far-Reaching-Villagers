@@ -1,6 +1,1 @@
-- Renamed mod to Gossiping Villagers with a new icon
-- Trading halls and rapid trade rerolling now work properly
-- Workstations close to villagers retry almost immediately
-- Fixed false stuck detection when villagers gather at the bell or sleep
-- Villagers no longer target or gossip about broken workstations
-- Added asyncQueueCapacity to config to control queue size
+- Renamed mod to Far Reaching Villagers with a new icon
