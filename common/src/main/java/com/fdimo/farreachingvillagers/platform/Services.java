@@ -1,7 +1,7 @@
-package com.fdimo.gossipingvillagers.platform;
+package com.fdimo.farreachingvillagers.platform;
 
-import com.fdimo.gossipingvillagers.Constants;
-import com.fdimo.gossipingvillagers.platform.services.IPlatformHelper;
+import com.fdimo.farreachingvillagers.Constants;
+import com.fdimo.farreachingvillagers.platform.services.IPlatformHelper;
 
 import java.util.ServiceLoader;
 

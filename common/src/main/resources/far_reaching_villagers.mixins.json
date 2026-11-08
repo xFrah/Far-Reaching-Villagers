@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "com.fdimo.gossipingvillagers.mixin",
+  "package": "com.fdimo.farreachingvillagers.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "MixinVillagerKnowledge",

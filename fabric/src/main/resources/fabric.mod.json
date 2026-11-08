@@ -12,10 +12,10 @@
     "environment": "*",
     "entrypoints": {
         "main": [
-            "com.fdimo.gossipingvillagers.GossipingVillagersMod"
+            "com.fdimo.farreachingvillagers.FarReachingVillagersMod"
         ],
         "client": [
-            "com.fdimo.gossipingvillagers.GossipingVillagersClient"
+            "com.fdimo.farreachingvillagers.FarReachingVillagersClient"
         ]
     },
     "mixins": [

@@ -1,4 +1,4 @@
-# Gossiping Villagers
+# Far Reaching Villagers
 
 A high-performance, immersive mod that revolutionizes villager pathfinding and job acquisition by introducing a **Gossip Network**. Instead of every villager selfishly querying the server's chunk database, villagers now share workstation coordinates with each other through word-of-mouth!
 

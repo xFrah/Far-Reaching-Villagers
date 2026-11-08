@@ -1,4 +1,4 @@
-package com.fdimo.gossipingvillagers.platform.services;
+package com.fdimo.farreachingvillagers.platform.services;
 
 public interface IPlatformHelper {
 
